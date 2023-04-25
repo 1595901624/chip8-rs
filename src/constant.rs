@@ -9,13 +9,13 @@ pub(crate) const CHIP8_MEMORY: usize = 4096;
 ///
 /// 这意味着 CHIP-8 程序的格式与高级语言的基于文本的格式几乎没有相似之处。
 ///
-/// 每条 CHIP-8 指令的长度为两个字节，并使用四个十六进制数字表示。
+/// 每条 CHIP-8 指令的长度为两个字节，并使用四个十六进制数字表示，指令以大端方式存储在内存中。
 pub(crate) const INSTRUCTION_LENGTH: usize = 2;
 
 /// 字符集
 /// CHIP-8 包含内置字体实用程序，允许使用 DXYN 指令简单地输出字符。
 ///
-/// 所有十六进制数字（0-9，A-F）都有相应的精灵数据已经存储在解释器的内存中。
+/// 所有十六进制数字（0-9，A-F）都有相应的数据已经存储在解释器的内存中。
 ///
 /// 参阅：https://github.com/mattmikolay/chip-8/wiki/Mastering-CHIP%E2%80%908 Drawing Font
 pub(crate) const FONT_SET: [u8; 80] = [
