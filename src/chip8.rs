@@ -39,16 +39,16 @@ struct Chip8 {
 }
 
 impl Chip8 {
-    // 创建Chip8
+    /// 创建Chip8
     pub fn new() -> Self {
         // 将字体放置在内存的前 80 个字节
         let mut memory = [0u8; CHIP8_MEMORY];
         for i in 0..FONT_SET.len() {
-            mem[i] = FONT_SET[i];
+            memory[i] = FONT_SET[i];
         }
 
         return Self {
-            screen: [[u8; SCREEN_WIDTH]; SCREEN_HEIGHT],
+            screen: [[0; SCREEN_WIDTH]; SCREEN_HEIGHT],
             memory,
             data_register: [0; 16],
             program_counter: 0x200,
@@ -61,5 +61,17 @@ impl Chip8 {
             stack: [0; 16],
             stack_pointer: 0,
         };
+    }
+
+    /// 读取游戏 rom
+    pub fn load_rom(&mut self, rom_data: &[u8]) {
+        for (i, &byte) in rom_data.iter().enumerate() {
+            let addr = 0x200 + i;
+            if addr < 4096 {
+                self.memory[0x200 + i] = byte;
+            } else {
+                break;
+            }
+        }
     }
 }
