@@ -38,6 +38,24 @@ struct Chip8 {
     program_counter: u16,
 }
 
+/// 指令
+trait Instructions {
+    /// 清屏
+    ///
+    /// 0x00E0
+    fn cls(&mut self);
+
+    /// 从子程序返回
+    ///
+    /// 0x00EE
+    fn ret(&mut self);
+
+    /// 跳转地址到 NNN
+    ///
+    /// 0x1NNN
+    fn jp(&mut self);
+}
+
 impl Chip8 {
     /// 创建Chip8
     pub fn new() -> Self {
@@ -66,12 +84,49 @@ impl Chip8 {
     /// 读取游戏 rom
     pub fn load_rom(&mut self, rom_data: &[u8]) {
         for (i, &byte) in rom_data.iter().enumerate() {
-            let addr = 0x200 + i;
-            if addr < 4096 {
-                self.memory[0x200 + i] = byte;
-            } else {
-                break;
+            self.memory[0x200 + i] = byte;
+        }
+    }
+
+    /// 获取指令
+    fn get_opcode(&self) -> u16 {
+        return (self.memory[self.program_counter as usize] as u16) << 8 | (self.memory[self.program_counter as usize + 1] as u16);
+    }
+
+    /// 执行指令
+    fn exec_opcode(&mut self) {
+        let opcode = self.get_opcode();
+        match opcode & 0xF000 {
+            0x0000 => match opcode {
+                0x00E0 => self.cls(),
+                0x00EE => self.ret(),
+                _ => panic!("opcode {:#X} is bad", opcode),
+            },
+            0x1000 => self.jp(),
+            _ => {}
+        }
+    }
+}
+
+/// 实现指令
+impl Instructions for Chip8 {
+    fn cls(&mut self) {
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                self.screen[y][x] = 0;
             }
         }
+        self.program_counter += 2;
+    }
+
+    fn ret(&mut self) {
+        self.stack_pointer -= 1;
+        self.program_counter = self.stack[self.stack_pointer as usize];
+        self.program_counter += 2;
+    }
+
+    fn jp(&mut self) {
+        let nnn = self.get_opcode() & 0x0FFF;
+        self.program_counter = nnn;
     }
 }
