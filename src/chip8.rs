@@ -1,4 +1,5 @@
-use crate::constant::{CHIP8_MEMORY, FONT_SET, SCREEN_HEIGHT, SCREEN_WIDTH};
+use std::num::Wrapping;
+use crate::constant::{CHIP8_MEMORY, FONT_SET, INSTRUCTION_LENGTH, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 /// Chip8 解释器
 ///
@@ -11,7 +12,7 @@ use crate::constant::{CHIP8_MEMORY, FONT_SET, SCREEN_HEIGHT, SCREEN_WIDTH};
 /// 大多数Chip-8程序从位置 0x200（512）开始。
 ///
 /// 例外：但有些程序从 0x600（1536）开始。以 0x600开始的程序是为 ETI 660计算机准备的，我们不考虑这种情况。
-struct Chip8 {
+pub struct Chip8 {
     // 屏幕
     screen: [[u8; SCREEN_WIDTH]; SCREEN_HEIGHT],
     // 内存
@@ -39,21 +40,51 @@ struct Chip8 {
 }
 
 /// 指令
-trait Instructions {
+pub trait Instructions {
     /// 清屏
     ///
-    /// 0x00E0
+    /// 00E0
     fn cls(&mut self);
 
     /// 从子程序返回
     ///
-    /// 0x00EE
+    /// 00EE
     fn ret(&mut self);
 
     /// 跳转地址到 NNN
     ///
-    /// 0x1NNN
+    /// 1NNN
     fn jp(&mut self);
+
+    /// 从地址 NNN 开始执行子程序
+    ///
+    /// 2NNN
+    fn call(&mut self);
+
+    /// 如果寄存器 VX 的值等于 NN，则跳过下面的指令
+    ///
+    /// 3XNN
+    fn se_vx_byte(&mut self);
+
+    /// 如果寄存器 VX 的值不等于 NN，则跳过下面的指令
+    ///
+    /// 4XNN
+    fn sne_vx_byte(&mut self);
+
+    /// 如果寄存器 VX 的值等于寄存器 VY 的值，则跳过下面的指令
+    ///
+    /// 5XY0
+    fn se_vx_vy(&mut self);
+
+    /// 在寄存器 VX 中存储编号 NN
+    ///
+    /// 6XNN
+    fn ld_vx_byte(&mut self);
+
+    /// VX = VX + NN
+    ///
+    /// 7XNN
+    fn add_vx_byte(&mut self);
 }
 
 impl Chip8 {
@@ -116,17 +147,75 @@ impl Instructions for Chip8 {
                 self.screen[y][x] = 0;
             }
         }
-        self.program_counter += 2;
+        self.program_counter += INSTRUCTION_LENGTH;
     }
 
     fn ret(&mut self) {
         self.stack_pointer -= 1;
         self.program_counter = self.stack[self.stack_pointer as usize];
-        self.program_counter += 2;
+        self.program_counter += INSTRUCTION_LENGTH;
     }
 
     fn jp(&mut self) {
         let nnn = self.get_opcode() & 0x0FFF;
         self.program_counter = nnn;
+    }
+
+    fn call(&mut self) {
+        self.stack[self.stack_pointer as usize] = self.program_counter + INSTRUCTION_LENGTH;
+        self.stack_pointer += 1;
+        self.program_counter = self.get_opcode() & 0x0FFF;
+    }
+
+    fn se_vx_byte(&mut self) {
+        let opcode = self.get_opcode();
+        let x = (opcode & 0x0F00) >> 8;
+        let nn = (opcode & 0x00FF) as u8;
+        if self.memory[x as usize] == nn {
+            self.program_counter += INSTRUCTION_LENGTH;
+        }
+        self.program_counter += INSTRUCTION_LENGTH;
+    }
+
+    fn sne_vx_byte(&mut self) {
+        let opcode = self.get_opcode();
+        let x = (opcode & 0x0F00) >> 8;
+        let nn = (opcode & 0x00FF) as u8;
+        if self.memory[x as usize] != nn {
+            self.program_counter += INSTRUCTION_LENGTH;
+        }
+        self.program_counter += INSTRUCTION_LENGTH;
+    }
+
+    fn se_vx_vy(&mut self) {
+        let opcode = self.get_opcode();
+        let x = (opcode & 0x0F00) >> 8;
+        let y = (opcode & 0x00F0) >> 4;
+        if self.memory[x as usize] == self.memory[y as usize] {
+            self.program_counter += INSTRUCTION_LENGTH;
+        }
+        self.program_counter += INSTRUCTION_LENGTH;
+    }
+
+    fn ld_vx_byte(&mut self) {
+        let opcode = self.get_opcode();
+        let x = (opcode & 0x0F00) >> 8;
+        let nn = (opcode & 0x00FF) as u8;
+        self.memory[x as usize] = nn;
+        self.program_counter += INSTRUCTION_LENGTH;
+    }
+
+    // ??? 检查是否存在bug
+    fn add_vx_byte(&mut self) {
+        let opcode = self.get_opcode();
+        // let x = (opcode & 0x0F00) >> 8;
+        // let nn = Wrapping((opcode & 0x00FF) as u8);
+        // let x_val = Wrapping(self.memory[x as usize]);
+        // self.memory[x as usize] = (x_val + nn).0;
+        // self.program_counter += 2;
+        let x = (opcode & 0x0F00) >> 8;
+        let nn = (opcode & 0x00FF) as u8;
+        self.memory[x as usize] += nn;
+        self.program_counter += INSTRUCTION_LENGTH;
     }
 }

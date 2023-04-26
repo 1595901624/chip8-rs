@@ -10,7 +10,7 @@ pub(crate) const CHIP8_MEMORY: usize = 4096;
 /// 这意味着 CHIP-8 程序的格式与高级语言的基于文本的格式几乎没有相似之处。
 ///
 /// 每条 CHIP-8 指令的长度为两个字节，并使用四个十六进制数字表示，指令以大端方式存储在内存中。
-pub(crate) const INSTRUCTION_LENGTH: usize = 2;
+pub(crate) const INSTRUCTION_LENGTH: u16 = 2;
 
 /// 字符集
 /// CHIP-8 包含内置字体实用程序，允许使用 DXYN 指令简单地输出字符。
